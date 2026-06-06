@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { performTranslation, TranslatedBRDData } from "@/utils/translator";
 
 export interface BRDSection {
   id: string;
@@ -63,6 +64,7 @@ export interface BRD {
     currency: string;
     details: string;
   };
+  translations?: Record<string, TranslatedBRDData>;
 }
 
 interface BRDContextType {
@@ -94,7 +96,11 @@ const PREBUILT_TEMPLATES_CONTENT: Record<string, { sections: BRDSection[]; stori
       { id: "problem", title: "Problem Statement", content: "Existing legacy e-commerce sites suffer from sluggish page speeds (averaging > 4s load times), confusing checkout flows, and poor mobile responsive design, leading to high cart abandonment rates of over 74% and limited SEO organic ranking potential." },
       { id: "objectives", title: "Objectives", content: "1. Achieve average page loading speed under 1.5 seconds.\n2. Reduce cart abandonment rate from 74% to under 45%.\n3. Increase user checkout conversion by 25% within three months of release.\n4. Support modern Indian payment protocols including UPI AutoPay, credit/debit networks, and netbanking." },
       { id: "scope", title: "Scope", content: "Included:\n- Headless storefront API and Next.js reactive frontend.\n- Global cart state with local resilience.\n- Razorpay, Stripe, and UPI checkout routing.\n- Merchant dashboard for order tracking and inventory management.\n\nExcluded:\n- Global cold storage warehousing inventory system integrations." },
-      { id: "functional", title: "Functional Requirements", content: "1. **User Auth**: Secure verification via SMS, Google OAuth, and OTP.\n2. **Product Directory**: Dynamic instant filtering by category, pricing, ratings, and tag clusters.\n3. **Smart Cart**: Auto-applied promo vouchers, multi-currency support, and persistent state.\n4. **Merchant Panel**: Real-time notifications on new orders, inventory reordering sheets, and shipping tracking updates." }
+      { id: "stakeholders", title: "Stakeholders", content: "1. Shoppers / End Users: Need simple, fast responsive storefronts.\n2. Shop Merchants: Manage products, billing codes, and active logistics.\n3. Courier Partners: Deliver goods using shared API webhooks.\n4. Site Administrators: Moderate users, catalog directories, and analytics dashboards." },
+      { id: "functional", title: "Functional Requirements", content: "1. **User Auth**: Secure verification via SMS, Google OAuth, and OTP.\n2. **Product Directory**: Dynamic instant filtering by category, pricing, ratings, and tag clusters.\n3. **Smart Cart**: Auto-applied promo vouchers, multi-currency support, and persistent state.\n4. **Merchant Panel**: Real-time notifications on new orders, inventory reordering sheets, and shipping tracking updates." },
+      { id: "non-functional", title: "Non-Functional Requirements", content: "1. **Security**: PCI-DSS compliance for payment details and secure edge access filters.\n2. **Performance**: Serverless backend responsiveness with page loads under 1.5 seconds.\n3. **Availability**: 99.9% uptime during festive seasonal sales." },
+      { id: "tech-rec", title: "Technical Recommendations", content: "1. **Architecture**: Headless architecture using Next.js App Router for frontend shells.\n2. **Database**: Managed PostgreSQL database via Supabase.\n3. **Cache**: Redis for high-speed cart storage and catalogs." },
+      { id: "future-scope", title: "Future Scope", content: "1. Generative AI support for product catalogs.\n2. Automated regional language customer support." }
     ],
     stories: [
       { id: "us-1", title: "Checkout Flow", actor: "Shopper", action: "complete checkout using UPI dynamic scan", benefit: "I don't have to input my long credit card numbers repeatedly", priority: "High", status: "In Progress" },
@@ -120,17 +126,31 @@ const PREBUILT_TEMPLATES_CONTENT: Record<string, { sections: BRDSection[]; stori
   },
   "Food Delivery App": {
     sections: [
-      { id: "exec", title: "Executive Summary", content: "An on-demand localized food ordering and delivery pipeline. Connects customers, restaurants, and freelance delivery gig-workers in real time with automated route optimizations and automated dispatching." }
+      { id: "exec", title: "Executive Summary", content: "An on-demand localized food ordering and delivery pipeline. Connects customers, restaurants, and freelance delivery gig-workers in real time with automated route optimizations and automated dispatching." },
+      { id: "problem", title: "Problem Statement", content: "Local home kitchens and diners suffer from high platform fees (often exceeding 28%) and delayed dispatch systems, causing food quality issues and customer frustration." },
+      { id: "objectives", title: "Objectives", content: "1. Match delivery riders with kitchens in under 45 seconds of order confirmation.\n2. Keep commission rates under 10% for home kitchens.\n3. Maintain rider location tracking latency under 2 seconds." },
+      { id: "scope", title: "Scope", content: "Included:\n- Storefront client application.\n- Kitchen management dashboard.\n- Rider PWA map portal.\n\nExcluded:\n- Cold chain logistics telemetry integrations." },
+      { id: "stakeholders", title: "Stakeholders", content: "1. End Customers (Hungry users)\n2. Local Chefs / Restaurants (Food Providers)\n3. Gig Delivery Riders (Logistics Partners)\n4. Operations Administrators" },
+      { id: "functional", title: "Functional Requirements", content: "1. **Rider Geo-matching**: Auto-match riders within a 3km radius.\n2. **UPI Instant Payments**: Dynamic UPI links on checkout page.\n3. **Menu Management**: Simple inventory toggles for kitchen chefs." },
+      { id: "non-functional", title: "Non-Functional Requirements", content: "1. **Scalability**: Support 5,000 concurrent orders during dinner hours.\n2. **Latency**: Web socket update rates under 1.5 seconds." },
+      { id: "tech-rec", title: "Technical Recommendations", content: "1. **Backend**: AWS ECS WebSocket cluster.\n2. **Database**: Managed PostgreSQL on Supabase.\n3. **Maps**: Mapbox GL JS offline navigation maps." },
+      { id: "future-scope", title: "Future Scope", content: "1. Machine-learning-based dynamic pricing for monsoon seasons.\n2. Voice-guided in-app navigation for delivery riders." }
     ],
-    stories: [],
-    risks: [],
-    timeline: [],
+    stories: [
+      { id: "us-fd-1", title: "Rider Map Tracking", actor: "Customer", action: "see the real-time position of the rider", benefit: "I know exactly when to receive my food at the gate", priority: "High", status: "In Progress" }
+    ],
+    risks: [
+      { id: "rk-fd-1", category: "Network Latency", description: "Real-time socket disconnects during peak dinner periods.", impact: "High", mitigation: "Implement reliable long-polling fallback." }
+    ],
+    timeline: [
+      { id: "ms-fd-1", title: "Sprint 1: DB & Sockets setup", duration: "3 weeks", description: "Design order dispatching state machines.", deliverables: ["Socket cluster deployment", "Real-time chat schema"] }
+    ],
     diagramCode: `graph TD
   Customer -->|Order| Server[Core Dispatch API]
   Server -->|Ping| Restaurant[Kitchen Dashboard]
   Server -->|Assign Route| Driver[Driver Mobile App]`,
     questions: [],
-    budget: { low: 22000, high: 45000, currency: "USD", details: "Includes custom iOS & Android driver applications, restaurant manager portal, and core real-time socket server." }
+    budget: { low: 22000, high: 45000, currency: "USD", details: "Includes custom PWA applications, restaurant portal, and core real-time socket server." }
   }
 };
 
@@ -247,7 +267,6 @@ export const BRDProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
 
       const finalBrds = brds.map(b => b.id === id ? populatedBrd : b);
-      // If the list changed concurrently, append/overwrite
       const isStillInList = finalBrds.some(b => b.id === id);
       const finalSaveList = isStillInList ? finalBrds : [populatedBrd, ...brds.filter(b => b.id !== id)];
       saveToLocalStorage(finalSaveList);
@@ -259,10 +278,25 @@ export const BRDProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateBrdSection = (brdId: string, sectionId: string, content: string) => {
     const updated = brds.map(brd => {
       if (brd.id === brdId) {
-        return {
-          ...brd,
-          sections: brd.sections.map(s => s.id === sectionId ? { ...s, content } : s)
-        };
+        const lang = brd.language || "English";
+        if (lang === "English") {
+          return {
+            ...brd,
+            sections: brd.sections.map(s => s.id === sectionId ? { ...s, content } : s)
+          };
+        } else if (brd.translations?.[lang]) {
+          const transData = brd.translations[lang];
+          return {
+            ...brd,
+            translations: {
+              ...brd.translations,
+              [lang]: {
+                ...transData,
+                sections: transData.sections.map(s => s.id === sectionId ? { ...s, content } : s)
+              }
+            }
+          };
+        }
       }
       return brd;
     });
@@ -282,9 +316,23 @@ export const BRDProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateStoryStatus = (brdId: string, storyId: string, status: UserStory["status"]) => {
     const updated = brds.map(brd => {
       if (brd.id === brdId) {
+        // Update original stories
+        const updatedStories = brd.userStories.map(s => s.id === storyId ? { ...s, status } : s);
+        
+        // Also update story status in all cached translations so they stay in sync
+        const updatedTranslations = { ...(brd.translations || {}) };
+        Object.keys(updatedTranslations).forEach(lang => {
+          const transData = updatedTranslations[lang];
+          updatedTranslations[lang] = {
+            ...transData,
+            userStories: transData.userStories.map(s => s.id === storyId ? { ...s, status } : s)
+          };
+        });
+
         return {
           ...brd,
-          userStories: brd.userStories.map(s => s.id === storyId ? { ...s, status } : s)
+          userStories: updatedStories,
+          translations: updatedTranslations
         };
       }
       return brd;
@@ -295,12 +343,10 @@ export const BRDProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const submitClarificationAnswer = async (brdId: string, questionId: string, answer: string) => {
     const updated = brds.map(brd => {
       if (brd.id === brdId) {
-        // Mark the question as answered and add the response
         const newQuestions = brd.questions.map(q => 
           q.id === questionId ? { ...q, answered: true, answer } : q
         );
 
-        // Dynamically append or inject the user's answer into relevant sections of the BRD!
         const questionObj = brd.questions.find(q => q.id === questionId);
         let updatedSections = [...brd.sections];
         
@@ -338,83 +384,20 @@ export const BRDProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const translateActiveBRD = async (targetLang: string) => {
     if (!activeBrdId) return;
 
-    // Translation mapping dictionary for Indian languages
-    const translationTable: Record<string, Record<string, string>> = {
-      "Hindi": {
-        "Executive Summary": "कार्यकारी सारांश",
-        "Problem Statement": "समस्या का विवरण",
-        "Objectives": "उद्देश्य",
-        "Scope": "दायरा (स्कोप)",
-        "Functional Requirements": "कार्यात्मक आवश्यकताएं",
-        "A high-performance, mobile-first E-Commerce web application featuring a fast, headless checkout": "एक उच्च-प्रदर्शन, मोबाइल-प्रथम ई-कॉमर्स वेब एप्लिकेशन जिसमें तेज़, हेडलेस चेकआउट शामिल है",
-        "Existing legacy e-commerce sites suffer from sluggish page speeds": "मौजूदा पुराने ई-कॉमर्स साइटों की पेज स्पीड काफी धीमी होती है",
-        "Achieve average page loading speed under 1.5 seconds.": "औसत पेज लोडिंग गति 1.5 सेकंड से कम प्राप्त करें।"
-      },
-      "Tamil": {
-        "Executive Summary": "நிர்வாக சுருக்கம்",
-        "Problem Statement": "பிரச்சனை அறிக்கை",
-        "Objectives": "நோக்கங்கள்",
-        "Scope": "எல்லை",
-        "Functional Requirements": "செயல்பாட்டு தேவைகள்",
-        "A high-performance, mobile-first E-Commerce web application featuring a fast, headless checkout": "வேகமான, ஹெட்லெஸ் செக்அவுட் கொண்ட உயர்தர மொபைல் இ-காமர்ஸ் இணைய பயன்பாடு"
-      },
-      "Gujarati": {
-        "Executive Summary": "કાર્યવાહક સારાંશ",
-        "Problem Statement": "સમસ્યાનું નિવેદન",
-        "Objectives": "ઉદ્દેશ્યો",
-        "Scope": "કાર્યક્ષેત્ર",
-        "Functional Requirements": "કાર્યાત્મક આવશ્યકતાઓ"
-      },
-      "Marathi": {
-        "Executive Summary": "कार्यकारी सारांश",
-        "Problem Statement": "समस्येचे विधान",
-        "Objectives": "उद्दिष्टे",
-        "Scope": "व्याप्ती (स्कोप)",
-        "Functional Requirements": "कार्यात्मक आवश्यकता"
-      },
-      "Bengali": {
-        "Executive Summary": "নির্বাহী সারসংক্ষেপ",
-        "Problem Statement": "সমস্যা বিবৃতি",
-        "Objectives": "উদ্দেশ্য সমূহ",
-        "Scope": "কাজের পরিধি",
-        "Functional Requirements": "কার্যকরী প্রয়োজনীয়তা"
-      }
-    };
+    const targetBrd = brds.find(b => b.id === activeBrdId);
+    if (!targetBrd) return;
 
-    const translationData = translationTable[targetLang];
-    
+    const translatedData = await performTranslation(targetBrd, targetLang, apiKey);
+
     const updated = brds.map(brd => {
       if (brd.id === activeBrdId) {
-        const translatedSections = brd.sections.map(sec => {
-          let transTitle = sec.title;
-          let transContent = sec.content;
-
-          if (translationData) {
-            // Translate title if exists in mapping
-            if (translationData[sec.title]) {
-              transTitle = translationData[sec.title];
-            }
-            
-            // Basic mock replacement of sentence fragments for beautiful visual display
-            Object.entries(translationData).forEach(([key, val]) => {
-              if (sec.content.includes(key)) {
-                transContent = transContent.replaceAll(key, val);
-              }
-            });
-          }
-
-          return {
-            ...sec,
-            title: transTitle,
-            content: `[${targetLang} Translation]\n` + transContent
-          };
-        });
-
         return {
           ...brd,
-          sections: translatedSections,
           language: targetLang,
-          targetLang
+          translations: {
+            ...(brd.translations || {}),
+            [targetLang]: translatedData
+          }
         };
       }
       return brd;
@@ -463,9 +446,29 @@ export const BRDProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           content: "Included:\n- Real-time client storefront (Web, Android, iOS).\n- Dynamic kitchen menu configurator.\n- Rider routing dispatcher with visual map canvas.\n- SMS notification gateway integration.\n\nExcluded:\n- Cold chain logistics telemetry systems." 
         },
         { 
+          id: "stakeholders", 
+          title: "Stakeholders", 
+          content: "1. Home Kitchens & Restaurants (Sellers): Manage culinary catalogs and toggle item stock status.\n2. Gig Delivery Riders (Logistics Partners): Receive optimal routing dispatches via the rider client.\n3. Local Consumers (End Users): Browse local dishes, place UPI-scanned orders, and track rider locations in real time.\n4. Operations Managers: Monitor dashboard logs, refund pipelines, and active fleet maps."
+        },
+        { 
           id: "functional", 
           title: "Functional Requirements", 
           content: "1. **Geo-Fencing Dispatcher**: Automatically identify the nearest active delivery gig-workers in a 3km radius.\n2. **Payment Hub**: Integrate instant UPI refund rails for customer order cancellations.\n3. **Visual Menu Editor**: Let restaurants drag and drop photo uploads, toggle product availability, and edit meal pricing ranges." 
+        },
+        { 
+          id: "non-functional", 
+          title: "Non-Functional Requirements", 
+          content: "1. **Security**: Double check fraud detection and MFA authentication protocols for riders.\n2. **Performance**: Real-time websocket latency kept under 1.5 seconds on mobile data links.\n3. **Reliability**: 99.9% system availability during dinner rush hours."
+        },
+        { 
+          id: "tech-rec", 
+          title: "Technical Recommendations", 
+          content: "1. **Architecture**: Next.js App Router for server-rendered customer storefronts alongside Node websocket cluster nodes.\n2. **Database**: PostgreSQL hosted on Supabase with Prisma models.\n3. **Map Tiles**: Mapbox GL JS offline vector rendering engine."
+        },
+        { 
+          id: "future-scope", 
+          title: "Future Scope", 
+          content: "1. Machine-learning-based dynamic pricing server extensions for rainy seasons.\n2. Regional language voice feedback integrations for rider clients."
         }
       ],
       userStories: [

@@ -7,7 +7,7 @@ import {
   Sparkles, Mic, FileText, UploadCloud, ChevronRight, 
   ArrowLeft, AlertTriangle, CheckCircle, RefreshCw, Send, 
   Edit3, Languages, Download, Share2, Eye, Layout, ShieldAlert,
-  Sliders, Trash2, Calendar, FileJson, Layers, Map, HelpCircle, Info
+  Sliders, Trash2, Calendar, FileJson, Layers, Map, HelpCircle, Info, Loader2
 } from "lucide-react";
 import { useBRD, BRD, UserStory } from "@/context/BRDContext";
 import jsPDF from "jspdf";
@@ -49,9 +49,20 @@ export default function NewBRDFlow() {
   const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [isTranslating, setIsTranslating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Timer reference for voice recording
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const LANGUAGES_OPTIONS = [
+    { value: "English", label: "English", flag: "🇬🇧" },
+    { value: "Hindi", label: "हिंदी (Hindi)", flag: "🇮🇳" },
+    { value: "Tamil", label: "தமிழ் (Tamil)", flag: "🇮🇳" },
+    { value: "Gujarati", label: "ગુજરાતી (Gujarati)", flag: "🇮🇳" },
+    { value: "Marathi", label: "मराठी (Marathi)", flag: "🇮🇳" },
+    { value: "Bengali", label: "বাংলা (Bengali)", flag: "🇮🇳" }
+  ];
 
   // Handle auto-routing based on query ID
   useEffect(() => {
@@ -61,6 +72,13 @@ export default function NewBRDFlow() {
       }
     }
   }, [activeParamId, activeBrd]);
+
+  // Sync selected language with active BRD state
+  useEffect(() => {
+    if (activeBrd) {
+      setSelectedLanguage(activeBrd.language || "English");
+    }
+  }, [activeBrd]);
 
   // Audio recording simulation
   const toggleRecording = () => {
@@ -159,12 +177,32 @@ export default function NewBRDFlow() {
     setIsTranslating(true);
     setSelectedLanguage(lang);
     
+    // Simulate translation delay for high UX quality (1.2 seconds)
     setTimeout(async () => {
-      await translateActiveBRD(lang);
-      setIsTranslating(false);
-      confetti({ particleCount: 30, spread: 40 });
-    }, 1500);
+      try {
+        await translateActiveBRD(lang);
+        setToastMessage(`${lang} translation generated successfully`);
+        setTimeout(() => setToastMessage(null), 3000);
+        confetti({ particleCount: 35, spread: 45, colors: ["#8b5cf6", "#06b6d4"] });
+      } catch (error) {
+        console.error("Translation error", error);
+      } finally {
+        setIsTranslating(false);
+      }
+    }, 1200);
   };
+
+  // Compute active variables to display based on active language selection
+  const translatedData = selectedLanguage === "English" 
+    ? null 
+    : activeBrd?.translations?.[selectedLanguage];
+
+  const displayTitle = translatedData?.title || activeBrd?.title || "";
+  const displaySections = translatedData?.sections || activeBrd?.sections || [];
+  const displayStories = translatedData?.userStories || activeBrd?.userStories || [];
+  const displayRisks = translatedData?.risks || activeBrd?.risks || [];
+  const displayTimeline = translatedData?.timeline || activeBrd?.timeline || [];
+  const displayBudget = translatedData?.budgetEstimate || activeBrd?.budgetEstimate || { low: 0, high: 0, currency: "USD", details: "" };
 
   // PDF Export
   const handleExportPDF = () => {
@@ -176,14 +214,14 @@ export default function NewBRDFlow() {
       doc.setFont("helvetica", "bold");
       doc.text(`BUSINESS REQUIREMENTS DOCUMENT (BRD)`, 15, 20);
       doc.setFont("helvetica", "normal");
-      doc.text(`Project Title: ${activeBrd.title}`, 15, 30);
-      doc.text(`Language: ${activeBrd.language}`, 15, 38);
+      doc.text(`Project Title: ${displayTitle}`, 15, 30);
+      doc.text(`Language: ${selectedLanguage}`, 15, 38);
       doc.text(`Generated Date: ${activeBrd.createdAt}`, 15, 46);
       
       doc.line(15, 52, 195, 52);
 
       let yPos = 65;
-      activeBrd.sections.forEach(sec => {
+      displaySections.forEach(sec => {
         if (yPos > 270) {
           doc.addPage();
           yPos = 20;
@@ -204,7 +242,7 @@ export default function NewBRDFlow() {
         yPos += 10;
       });
 
-      doc.save(`AutoBRD_${activeBrd.title.replaceAll(" ", "_")}.pdf`);
+      doc.save(`AutoBRD_${displayTitle.replaceAll(" ", "_")}.pdf`);
       setIsExporting(false);
       confetti({ particleCount: 50, spread: 60 });
     }, 1800);
@@ -217,10 +255,10 @@ export default function NewBRDFlow() {
 
     setTimeout(() => {
       let content = `BUSINESS REQUIREMENTS DOCUMENT\n`;
-      content += `Project: ${activeBrd.title}\n`;
+      content += `Project: ${displayTitle}\n`;
       content += `Generated via AutoBRD AI\n\n`;
 
-      activeBrd.sections.forEach(sec => {
+      displaySections.forEach(sec => {
         content += `========================================\n`;
         content += `${sec.title.toUpperCase()}\n`;
         content += `========================================\n`;
@@ -230,7 +268,7 @@ export default function NewBRDFlow() {
       const element = document.createElement("a");
       const file = new Blob([content], { type: "text/plain" });
       element.href = URL.createObjectURL(file);
-      element.download = `AutoBRD_${activeBrd.title.replaceAll(" ", "_")}.docx`;
+      element.download = `AutoBRD_${displayTitle.replaceAll(" ", "_")}.docx`;
       document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
@@ -539,36 +577,80 @@ export default function NewBRDFlow() {
               <div className="p-2 bg-green-500/10 border border-green-500/20 text-green-400 rounded-lg">
                 <CheckCircle className="h-4.5 w-4.5" />
               </div>
-              <div>
-                <h2 className="text-base font-extrabold text-white">{activeBrd.title}</h2>
-                <span className="text-[10px] text-zinc-500 mt-0.5 block font-mono">ID: {activeBrd.id} • Language: {activeBrd.language}</span>
+              <div className="text-left">
+                <h2 className="text-base font-extrabold text-white">{displayTitle}</h2>
+                <span className="text-[10px] text-zinc-500 mt-0.5 block font-mono">ID: {activeBrd.id} • Language: {selectedLanguage}</span>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Indian Translation switcher */}
-              <div className="relative">
-                <select 
-                  value={selectedLanguage}
-                  onChange={(e) => handleTranslate(e.target.value)}
-                  disabled={isTranslating}
-                  className="px-3 py-2 text-xs rounded-xl glass bg-zinc-950 border border-white/10 text-zinc-300 focus:outline-none focus:border-primary flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                >
-                  <option value="English">Translate (English)</option>
-                  <option value="Hindi">हिंदी (Hindi)</option>
-                  <option value="Tamil">தமிழ் (Tamil)</option>
-                  <option value="Gujarati">ગુજરાતી (Gujarati)</option>
-                  <option value="Marathi">मराठी (Marathi)</option>
-                  <option value="Bengali">বাংলা (Bengali)</option>
-                </select>
-                {isTranslating && <span className="absolute right-8 top-3 h-2 w-2 rounded-full bg-primary animate-ping" />}
+            <div className="flex flex-wrap items-center gap-3 relative z-30">
+              {/* Indian Translation switcher & Status Badge */}
+              <div className="flex items-center gap-3 relative">
+                {/* Powered by Sarvam Badge */}
+                <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-semibold bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-purple-500/5 border border-purple-500/20 text-purple-300 glass shadow-[0_0_15px_rgba(139,92,246,0.1)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  ✓ Powered by Sarvam AI
+                </div>
+
+                {/* Custom dropdown wrapper with fixed width & z-index */}
+                <div className="relative w-48 text-left">
+                  <button
+                    onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+                    disabled={isTranslating}
+                    className="w-full px-3 py-2 text-xs rounded-xl glass bg-zinc-950/90 border border-white/10 text-zinc-300 flex items-center justify-between gap-1 cursor-pointer disabled:opacity-50 hover:border-primary/40 transition-colors"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span>{LANGUAGES_OPTIONS.find(l => l.value === selectedLanguage)?.flag}</span>
+                      <span>{LANGUAGES_OPTIONS.find(l => l.value === selectedLanguage)?.label}</span>
+                    </span>
+                    <ChevronRight className={`h-3 w-3 text-zinc-500 transition-transform ${langDropdownOpen ? "rotate-90" : ""}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {langDropdownOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 top-full mt-2 w-full glass bg-zinc-950/95 border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden"
+                      >
+                        <div className="py-1">
+                          {LANGUAGES_OPTIONS.map((lang) => {
+                            const isSelected = selectedLanguage === lang.value;
+                            return (
+                              <button
+                                key={lang.value}
+                                onClick={() => {
+                                  setLangDropdownOpen(false);
+                                  handleTranslate(lang.value);
+                                }}
+                                className={`w-full px-3 py-2.5 text-xs text-left flex items-center justify-between transition-colors ${
+                                  isSelected 
+                                    ? "bg-primary/20 text-white font-bold" 
+                                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                                }`}
+                              >
+                                <span className="flex items-center gap-2">
+                                  <span>{lang.flag}</span>
+                                  <span>{lang.label}</span>
+                                </span>
+                                {isSelected && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
 
               {/* Exports */}
               <button 
                 onClick={handleExportPDF}
                 disabled={isExporting}
-                className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-zinc-300 transition-all flex items-center gap-1.5 disabled:opacity-50"
+                className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-zinc-300 transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
               >
                 <Download className="h-3.5 w-3.5" />
                 Export PDF
@@ -576,7 +658,7 @@ export default function NewBRDFlow() {
 
               <button 
                 onClick={handleExportDOCX}
-                className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-zinc-300 transition-all flex items-center gap-1.5"
+                className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-zinc-300 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Download className="h-3.5 w-3.5 text-indigo-400" />
                 Export DOCX
@@ -587,7 +669,7 @@ export default function NewBRDFlow() {
                   navigator.clipboard.writeText(window.location.href);
                   alert("Shareable workspace link successfully copied to your clipboard!");
                 }}
-                className="p-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white flex items-center justify-center shadow-lg shadow-primary/20"
+                className="p-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white flex items-center justify-center shadow-lg shadow-primary/20 cursor-pointer"
                 title="Copy Share Link"
               >
                 <Share2 className="h-3.5 w-3.5" />
@@ -599,7 +681,19 @@ export default function NewBRDFlow() {
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
             
             {/* Left Pane: Document Viewer with editor block */}
-            <div className="xl:col-span-8 flex flex-col gap-6">
+            <div className="xl:col-span-8 flex flex-col gap-6 relative">
+              {/* Premium Overlay Translator Loader */}
+              {isTranslating && (
+                <div className="absolute inset-0 bg-black/75 backdrop-blur-[3px] rounded-2xl flex flex-col items-center justify-center gap-3.5 z-40 transition-all">
+                  <div className="bg-zinc-950 border border-white/10 rounded-2xl p-6 flex flex-col items-center gap-3 shadow-2xl max-w-xs text-center">
+                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                    <div className="flex flex-col items-center">
+                      <span className="text-xs font-bold text-white">Translating via Sarvam AI...</span>
+                      <span className="text-[10px] text-zinc-500 mt-1">Refining grammar and terminology</span>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               {/* Tabs switcher for Right panel on Mobile / Left content tabs */}
               <div className="flex border-b border-white/10">
@@ -639,7 +733,7 @@ export default function NewBRDFlow() {
 
               {activeWorkspaceTab === "document" && (
                 <div className="p-6 rounded-2xl bg-zinc-950/40 border border-white/5 flex flex-col gap-6 text-left shadow-xl">
-                  {activeBrd.sections.map((sec) => (
+                  {displaySections.map((sec) => (
                     <div key={sec.id} className="group relative border-b border-white/[0.04] pb-6 last:border-0 last:pb-0">
                       
                       {/* Section Header */}
@@ -651,7 +745,7 @@ export default function NewBRDFlow() {
                               setEditorSectionId(sec.id);
                               setEditContent(sec.content);
                             }}
-                            className="p-1 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-zinc-400 hover:text-white text-[10px] flex items-center gap-1"
+                            className="p-1 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-zinc-400 hover:text-white text-[10px] flex items-center gap-1 cursor-pointer"
                           >
                             <Edit3 className="h-3 w-3" />
                             Edit
@@ -660,7 +754,7 @@ export default function NewBRDFlow() {
                             onClick={() => {
                               alert("AI processing: Rewriting section text content with higher technical precision...");
                             }}
-                            className="p-1 rounded bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-[10px] flex items-center gap-1"
+                            className="p-1 rounded bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary text-[10px] flex items-center gap-1 cursor-pointer"
                           >
                             <RefreshCw className="h-3 w-3" />
                             AI Refine
@@ -680,7 +774,7 @@ export default function NewBRDFlow() {
                           <div className="flex justify-end gap-2">
                             <button 
                               onClick={() => setEditorSectionId(null)}
-                              className="px-2.5 py-1.5 rounded-lg bg-white/5 text-[10px] text-zinc-400"
+                              className="px-2.5 py-1.5 rounded-lg bg-white/5 text-[10px] text-zinc-400 cursor-pointer"
                             >
                               Cancel
                             </button>
@@ -689,7 +783,7 @@ export default function NewBRDFlow() {
                                 updateBrdSection(activeBrd.id, sec.id, editContent);
                                 setEditorSectionId(null);
                               }}
-                              className="px-3 py-1.5 rounded-lg bg-primary text-white text-[10px] font-bold"
+                              className="px-3 py-1.5 rounded-lg bg-primary text-white text-[10px] font-bold cursor-pointer"
                             >
                               Save Changes
                             </button>
@@ -756,10 +850,10 @@ export default function NewBRDFlow() {
                     {/* Column 1: To Do */}
                     <div className="p-4 rounded-xl bg-zinc-900/60 border border-white/5 flex flex-col gap-3 min-h-[300px]">
                       <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-white/5 pb-2 block">
-                        To Do ({activeBrd.userStories.filter(s => s.status === "To Do").length})
+                        To Do ({displayStories.filter(s => s.status === "To Do").length})
                       </span>
                       <div className="flex flex-col gap-2.5">
-                        {activeBrd.userStories.filter(s => s.status === "To Do").map(story => (
+                        {displayStories.filter(s => s.status === "To Do").map(story => (
                           <div 
                             key={story.id} 
                             onClick={() => handleMoveStory(story.id, "To Do")}
@@ -777,7 +871,7 @@ export default function NewBRDFlow() {
                               <p className="text-white font-bold leading-tight">{story.title}</p>
                               <p className="text-[10px] text-zinc-500 mt-1">As a {story.actor}, I want to {story.action} so that {story.benefit}.</p>
                             </div>
-                            <span className="text-[9px] text-zinc-600 group-hover:text-primary transition-colors text-right">Tap to start →</span>
+                            <span className="text-[9px] text-zinc-600 group-hover:text-primary transition-colors text-right font-semibold">Tap to start →</span>
                           </div>
                         ))}
                       </div>
@@ -786,10 +880,10 @@ export default function NewBRDFlow() {
                     {/* Column 2: In Progress */}
                     <div className="p-4 rounded-xl bg-zinc-900/60 border border-white/5 flex flex-col gap-3 min-h-[300px]">
                       <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-white/5 pb-2 block">
-                        In Progress ({activeBrd.userStories.filter(s => s.status === "In Progress").length})
+                        In Progress ({displayStories.filter(s => s.status === "In Progress").length})
                       </span>
                       <div className="flex flex-col gap-2.5">
-                        {activeBrd.userStories.filter(s => s.status === "In Progress").map(story => (
+                        {displayStories.filter(s => s.status === "In Progress").map(story => (
                           <div 
                             key={story.id} 
                             onClick={() => handleMoveStory(story.id, "In Progress")}
@@ -807,7 +901,7 @@ export default function NewBRDFlow() {
                               <p className="text-white font-bold leading-tight">{story.title}</p>
                               <p className="text-[10px] text-zinc-400 mt-1">As a {story.actor}, I want to {story.action} so that {story.benefit}.</p>
                             </div>
-                            <span className="text-[9px] text-zinc-600 group-hover:text-green-400 transition-colors text-right">Tap to complete →</span>
+                            <span className="text-[9px] text-zinc-600 group-hover:text-green-400 transition-colors text-right font-semibold">Tap to complete →</span>
                           </div>
                         ))}
                       </div>
@@ -816,10 +910,10 @@ export default function NewBRDFlow() {
                     {/* Column 3: Done */}
                     <div className="p-4 rounded-xl bg-zinc-900/60 border border-white/5 flex flex-col gap-3 min-h-[300px]">
                       <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-white/5 pb-2 block">
-                        Done ({activeBrd.userStories.filter(s => s.status === "Done").length})
+                        Done ({displayStories.filter(s => s.status === "Done").length})
                       </span>
                       <div className="flex flex-col gap-2.5">
-                        {activeBrd.userStories.filter(s => s.status === "Done").map(story => (
+                        {displayStories.filter(s => s.status === "Done").map(story => (
                           <div 
                             key={story.id} 
                             onClick={() => handleMoveStory(story.id, "Done")}
@@ -832,7 +926,7 @@ export default function NewBRDFlow() {
                               </div>
                               <p className="text-zinc-500 font-bold leading-tight line-through">{story.title}</p>
                             </div>
-                            <span className="text-[9px] text-zinc-600 group-hover:text-red-400 transition-colors text-right">Tap to reset ↺</span>
+                            <span className="text-[9px] text-zinc-600 group-hover:text-red-400 transition-colors text-right font-semibold">Tap to reset ↺</span>
                           </div>
                         ))}
                       </div>
@@ -850,7 +944,7 @@ export default function NewBRDFlow() {
                   </div>
 
                   <div className="flex flex-col gap-4">
-                    {activeBrd.risks.map(risk => (
+                    {displayRisks.map(risk => (
                       <div key={risk.id} className="p-4 bg-zinc-900/60 border border-white/5 rounded-xl text-xs flex items-start gap-4">
                         <div className={`p-2.5 rounded-lg shrink-0 ${
                           risk.impact === "Critical" || risk.impact === "High" ? "bg-red-500/10 text-red-400 border border-red-500/20" : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
@@ -881,17 +975,17 @@ export default function NewBRDFlow() {
                 
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-extrabold text-white">
-                    {activeBrd.budgetEstimate.currency === "USD" ? "$" : "₹"}
-                    {activeBrd.budgetEstimate.low.toLocaleString()}
+                    {displayBudget.currency === "USD" ? "$" : "₹"}
+                    {displayBudget.low.toLocaleString()}
                   </span>
                   <span className="text-zinc-500 text-xs font-bold">to</span>
                   <span className="text-2xl font-extrabold text-indigo-400">
-                    {activeBrd.budgetEstimate.currency === "USD" ? "$" : "₹"}
-                    {activeBrd.budgetEstimate.high.toLocaleString()}
+                    {displayBudget.currency === "USD" ? "$" : "₹"}
+                    {displayBudget.high.toLocaleString()}
                   </span>
                 </div>
                 
-                <p className="text-[11px] text-zinc-400 leading-relaxed">{activeBrd.budgetEstimate.details}</p>
+                <p className="text-[11px] text-zinc-400 leading-relaxed">{displayBudget.details}</p>
               </div>
 
               {/* Persistent AI Workspace Assistant */}
@@ -905,21 +999,21 @@ export default function NewBRDFlow() {
                   <div className="flex flex-col gap-2.5 py-4">
                     <button 
                       onClick={() => alert("AI Suggestion: Recommending standard serverless architecture using Supabase DB, NextAuth paths, and dynamic Vercel scaling pipelines.")}
-                      className="p-2.5 rounded-xl border border-white/5 hover:border-primary/20 bg-white/[0.01] hover:bg-white/[0.03] text-left text-[11px] text-zinc-300 font-bold transition-all flex items-center justify-between"
+                      className="p-2.5 rounded-xl border border-white/5 hover:border-primary/20 bg-white/[0.01] hover:bg-white/[0.03] text-left text-[11px] text-zinc-300 font-bold transition-all flex items-center justify-between cursor-pointer"
                     >
                       Suggest Technical Stack
                       <ChevronRight className="h-3 w-3 text-zinc-500" />
                     </button>
                     <button 
                       onClick={() => alert("AI Suggestion: Cart checkout updates could require 2 additional days of edge function testing. Standard milestones extended.")}
-                      className="p-2.5 rounded-xl border border-white/5 hover:border-primary/20 bg-white/[0.01] hover:bg-white/[0.03] text-left text-[11px] text-zinc-300 font-bold transition-all flex items-center justify-between"
+                      className="p-2.5 rounded-xl border border-white/5 hover:border-primary/20 bg-white/[0.01] hover:bg-white/[0.03] text-left text-[11px] text-zinc-300 font-bold transition-all flex items-center justify-between cursor-pointer"
                     >
                       Estimate Effort & Timelines
                       <ChevronRight className="h-3 w-3 text-zinc-500" />
                     </button>
                     <button 
                       onClick={() => alert("AI Suggestion: Recommend security protocols like multi-factor authentication (MFA) and HTTPS edge encryptions to lower cart hijack risk metrics.")}
-                      className="p-2.5 rounded-xl border border-white/5 hover:border-primary/20 bg-white/[0.01] hover:bg-white/[0.03] text-left text-[11px] text-zinc-300 font-bold transition-all flex items-center justify-between"
+                      className="p-2.5 rounded-xl border border-white/5 hover:border-primary/20 bg-white/[0.01] hover:bg-white/[0.03] text-left text-[11px] text-zinc-300 font-bold transition-all flex items-center justify-between cursor-pointer"
                     >
                       Improve Scopes Security
                       <ChevronRight className="h-3 w-3 text-zinc-500" />
@@ -940,7 +1034,22 @@ export default function NewBRDFlow() {
   };
 
   return (
-    <div className="p-6 sm:p-8 max-w-7xl mx-auto w-full flex flex-col gap-6">
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto w-full flex flex-col gap-6 relative">
+      {/* Toast alert system */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-20 right-6 glass border border-green-500/20 bg-green-500/10 text-green-300 px-4 py-3 rounded-xl shadow-2xl z-50 text-xs font-bold flex items-center gap-2"
+          >
+            <CheckCircle className="h-4 w-4 text-green-400" />
+            {toastMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Step Stepper Header indicator */}
       {activeBrd && (
         <div className="flex items-center gap-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-widest font-mono">
